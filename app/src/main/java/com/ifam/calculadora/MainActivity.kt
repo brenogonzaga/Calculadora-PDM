@@ -4,11 +4,11 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.TextView
+import java.util.Stack
 
 class MainActivity : AppCompatActivity() {
     private lateinit var expressaoTextView: TextView
     private lateinit var resultadoTextView: TextView
-    private var currentExpression = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,7 +36,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun onButtonClick(value: String) {
         val currentExpression = expressaoTextView.text.toString()
-        expressaoTextView.text = "$currentExpression$value"
+        expressaoTextView.text = "$currentExpression $value"
     }
 
     private fun onDeleteButtonClick() {
@@ -48,18 +48,54 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun calculateResult() {
+        val currentExpression  = expressaoTextView.text.toString()
         if (currentExpression.isNotEmpty()) {
-            try {
-                val result = evalExpression(currentExpression)
-                resultadoTextView.text = result.toString()
-            } catch (e: Exception) {
-                resultadoTextView.text = "Erro"
-            }
+            val result = evaluateExpression(currentExpression)
+            resultadoTextView.text = result.toString()
         }
     }
 
-    private fun evalExpression(expression: String): Double {
-        return 0.0
+    private fun evaluateExpression(expression: String): Double {
+        val tokens = expression.split(" ")
+        val operandStack = Stack<Double>()
+        val operatorStack = Stack<Char>()
+
+        val precedence = mapOf('+' to 1, '-' to 1, '*' to 2, '/' to 2)
+
+        for (token in tokens) {
+            if (token.matches(Regex("\\d+"))) {
+                operandStack.push(token.toDouble())
+            } else if (token.length == 1 && "+-*/".contains(token)) {
+                while (!operatorStack.empty() && precedence[operatorStack.peek()]!! >= precedence[token[0]]!!) {
+                    val operator = operatorStack.pop()
+                    val operand2 = operandStack.pop()
+                    val operand1 = operandStack.pop()
+                    val result = performOperation(operand1, operand2, operator)
+                    operandStack.push(result)
+                }
+                operatorStack.push(token[0])
+            }
+        }
+
+        while (!operatorStack.empty()) {
+            val operator = operatorStack.pop()
+            val operand2 = operandStack.pop()
+            val operand1 = operandStack.pop()
+            val result = performOperation(operand1, operand2, operator)
+            operandStack.push(result)
+        }
+
+        return operandStack.pop()
+    }
+
+    private fun performOperation(operand1: Double, operand2: Double, operator: Char): Double {
+        return when (operator) {
+            '+' -> operand1 + operand2
+            '-' -> operand1 - operand2
+            '*' -> operand1 * operand2
+            '/' -> operand1 / operand2
+            else -> throw IllegalArgumentException("Operador desconhecido: $operator")
+        }
     }
 
 }
